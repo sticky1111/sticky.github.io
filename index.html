@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hu">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,13 +7,15 @@
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #f0f4f8;
+            background: url('background.jpg') no-repeat center center fixed; /* Háttérkép beállítása */
+            background-size: cover;
             display: flex;
             justify-content: center;
-            align-items: center;
-            flex-direction: column;
+            align-items: flex-start;
+            flex-direction: row;
             min-height: 100vh;
             margin: 0;
+            padding: 20px;
         }
         h1 {
             color: #333;
@@ -24,19 +26,25 @@
         }
         .main {
             text-align: center;
-            margin-bottom: 20px;
-            background: white;
+            margin-right: 20px;
+            background: rgba(255, 255, 255, 0.9); /* Átlátszó háttér */
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            flex: 1; /* Allows the main area to take available space */
         }
         .leaderboard, .inventory {
             width: 250px;
             padding: 20px;
-            background-color: #fff;
             border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             margin: 10px;
+        }
+        .leaderboard {
+            background: rgba(255, 230, 230, 0.9); /* Top 10 háttér */
+        }
+        .inventory {
+            background: rgba(230, 255, 230, 0.9); /* Inventár háttér */
         }
         img {
             width: 300px;
@@ -51,13 +59,6 @@
             font-size: 2em;
             margin-top: 20px;
             color: #333;
-        }
-        .leaderboard h2, .inventory h2 {
-            font-size: 1.5em;
-            margin-bottom: 10px;
-        }
-        .leaderboard ol {
-            padding-left: 20px;
         }
         #name-input {
             position: absolute;
@@ -97,6 +98,9 @@
         .inventory img {
             display: inline-block;
         }
+        .container {
+            display: flex;
+        }
     </style>
 </head>
 <body>
@@ -106,25 +110,28 @@
         <button id="save-name">Mentés</button>
     </div>
 
-    <div class="main">
-        <h1>Kattints a Bobcatre!</h1>
-        <img src="bobcat.png" alt="Bobcat" id="bobcat-image">
-        <div id="counter">0 kattintás</div>
-        <button id="reset-btn">Kattintások visszaállítása</button>
-        <button id="reset-all-btn">Összes adat törlése</button>
-        <button id="skins-btn">Skinek</button>
-    </div>
+    <div class="container">
+        <div class="main">
+            <h1>Click the Sticky!</h1> <!-- Felirat átnevezve -->
+            <img src="bobcat.png" alt="Bobcat" id="bobcat-image">
+            <div id="counter">0 kattintás</div>
+            <button id="reset-btn">Kattintások visszaállítása</button>
+            <button id="reset-all-btn">Összes adat törlése</button>
+        </div>
 
-    <div class="leaderboard">
-        <h2>Top 10 játékos</h2>
-        <ol id="leaderboard-list">
-        </ol>
-    </div>
+        <div>
+            <div class="leaderboard">
+                <h2>Top 10 játékos</h2>
+                <ol id="leaderboard-list">
+                </ol>
+            </div>
 
-    <div class="inventory">
-        <h2>Inventár</h2>
-        <div id="inventory-list">
-            <img src="bobcat.png" alt="Bobcat" class="skin" id="selected-skin">
+            <div class="inventory">
+                <h2>Inventár</h2>
+                <div id="inventory-list">
+                    <img src="bobcat.png" alt="Bobcat" class="skin" id="selected-skin">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -137,7 +144,6 @@
         const saveNameButton = document.getElementById('save-name');
         const resetBtn = document.getElementById('reset-btn');
         const resetAllBtn = document.getElementById('reset-all-btn');
-        const skinsBtn = document.getElementById('skins-btn');
         const inventoryList = document.getElementById('inventory-list');
         let playerName = localStorage.getItem('playerName');
         let leaderboard = localStorage.getItem('leaderboard') ? JSON.parse(localStorage.getItem('leaderboard')) : [];
@@ -182,7 +188,8 @@
                 img.src = skin;
                 img.classList.add('skin');
                 img.addEventListener('click', () => {
-                    document.getElementById('selected-skin').src = skin;
+                    bobcatImage.src = skin; // Változtatás a kiválasztott skinre
+                    document.getElementById('selected-skin').src = skin; // Frissítjük a kiválasztott skin képet
                 });
                 inventoryList.appendChild(img);
             });
@@ -232,35 +239,17 @@
         });
 
         resetBtn.addEventListener('click', () => {
-            if (confirm('Biztosan lenullázod a kattintásaidat?')) {
+            if (confirm('Biztosan visszaállítod a kattintásokat?')) {
                 counter = 0;
-                counterDisplay.textContent = '0 kattintás';
                 localStorage.setItem('clickCount', counter);
-                addPlayerToLeaderboard(playerName, counter);
+                counterDisplay.textContent = counter + ' kattintás';
             }
         });
 
         resetAllBtn.addEventListener('click', () => {
-            if (confirm('Biztosan törölni szeretnéd az összes adatot?')) {
+            if (confirm('Biztosan törlöd az összes adatot?')) {
                 localStorage.clear();
-                leaderboard = [];
-                playerName = '';
-                counter = 0;
-                inventory = [];
-                specialSkinEarned = false;
-                updateLeaderboard();
-                updateInventory();
-                counterDisplay.textContent = '0 kattintás';
-                document.getElementById('name-input').style.display = 'block';
-                playerNameInput.value = '';
-            }
-        });
-
-        skinsBtn.addEventListener('click', () => {
-            if (inventory.length > 0) {
-                updateInventory();
-            } else {
-                alert('Nincsenek skinek az inventoryban!');
+                location.reload(); // Frissíti az oldalt, hogy a változások érvénybe lépjenek
             }
         });
 
