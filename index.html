@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bobcat Click with Leaderboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .main {
+            text-align: center;
+            flex-grow: 1;
+        }
+        .leaderboard {
+            width: 200px;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            margin-right: 20px;
+        }
+        img {
+            width: 300px;
+            height: auto;
+            cursor: pointer;
+        }
+        #counter {
+            font-size: 2em;
+            margin-top: 20px;
+        }
+        .leaderboard h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        .leaderboard ol {
+            padding-left: 20px;
+        }
+        #name-input {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+        #reset-btn, #reset-all-btn {
+            background-color: red;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        #reset-all-btn {
+            background-color: orange;
+        }
+        #skins-panel {
+            display: none;
+            position: absolute;
+            top: 100px;
+            left: 50px;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 20px;
+            z-index: 100;
+        }
+        .skin {
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="name-input">
+        <label for="player-name">Add meg a neved:</label>
+        <input type="text" id="player-name" placeholder="Neved...">
+        <button id="save-name">Mentés</button>
+    </div>
+
+    <div class="main">
+        <h1>Kattints a Bobcatre!</h1>
+        <img src="bobcat.png" alt="Bobcat" id="bobcat-image">
+        <div id="counter">0 kattintás</div>
+        <button id="reset-btn">Kattintások visszaállítása</button>
+        <button id="reset-all-btn">Összes adat törlése</button>
+        <button id="skins-btn">Skinek</button> <!-- Skin gomb -->
+        <div id="skins-panel">
+            <h2>Skinek</h2>
+            <img src="bobcat.png" class="skin" data-skin="bobcat" alt="Bobcat Skin">
+            <img src="special.png" class="skin" data-skin="special" alt="Special Skin">
+            <img src="bobcat2.png" class="skin" data-skin="bobcat2" alt="Bobcat2 Skin">
+            <img src="bobcat3.png" class="skin" data-skin="bobcat3" alt="Bobcat3 Skin">
+            <button id="close-skins">Bezárás</button>
+        </div>
+    </div>
+
+    <div class="leaderboard">
+        <h2>Top 10 játékos</h2>
+        <ol id="leaderboard-list">
+            <!-- Ide jönnek a játékosok -->
+        </ol>
+    </div>
+
+    <script>
+        let counter = localStorage.getItem('clickCount') ? parseInt(localStorage.getItem('clickCount')) : 0;
+        const bobcatImage = document.getElementById('bobcat-image');
+        const counterDisplay = document.getElementById('counter');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const playerNameInput = document.getElementById('player-name');
+        const saveNameButton = document.getElementById('save-name');
+        const resetBtn = document.getElementById('reset-btn');
+        const resetAllBtn = document.getElementById('reset-all-btn');
+        const skinsBtn = document.getElementById('skins-btn');
+        const skinsPanel = document.getElementById('skins-panel');
+        const closeSkinsBtn = document.getElementById('close-skins');
+
+        let playerName = localStorage.getItem('playerName');
+        let leaderboard = localStorage.getItem('leaderboard') ? JSON.parse(localStorage.getItem('leaderboard')) : [];
+        let inventory = localStorage.getItem('inventory') ? JSON.parse(localStorage.getItem('inventory')) : [];
+        let specialSkinAssigned = false;
+
+        // Ha van már mentett név, automatikusan kitöltjük a mezőt és elrejtjük
+        if (playerName) {
+            playerNameInput.value = playerName;
+            document.getElementById('name-input').style.display = 'none'; // Elrejtjük a név mezőt, ha már megadta a nevét
+        }
+
+        // Ranglista frissítése
+        function updateLeaderboard() {
+            leaderboardList.innerHTML = '';
+            leaderboard.forEach((player) => {
+                const li = document.createElement('li');
+                li.textContent = `${player.name}: ${player.score} kattintás`;
+                leaderboardList.appendChild(li);
+            });
+        }
+
+        // Játékos hozzáadása a ranglistához vagy pontszám frissítése, ha már létezik
+        function addPlayerToLeaderboard(name, score) {
+            const existingPlayerIndex = leaderboard.findIndex(player => player.name === name);
+            if (existingPlayerIndex > -1) {
+                leaderboard[existingPlayerIndex].score = score; // Ha létezik, frissítjük a pontszámát
+            } else {
+                leaderboard.push({ name: name, score: score }); // Új játékos hozzáadása
+            }
+
+            // Ranglista rendezése pontszám szerint
+            leaderboard.sort((a, b) => b.score - a.score);
+
+            // Csak a top 10 játékos tárolása
+            if (leaderboard.length > 10) {
+                leaderboard = leaderboard.slice(0, 10);
+            }
+
+            // Elmentjük a ranglistát a localStorage-be
+            localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+
+            // Frissítjük a kijelzőn a ranglistát
+            updateLeaderboard();
+        }
+
+        // Frissítjük a kijelzőn a számlálót az aktuális értékkel
+        counterDisplay.textContent = counter + ' kattintás';
+
+        // Ha megnyomjuk a mentés gombot, elmentjük a nevet és elrejtjük a mezőt
+        saveNameButton.addEventListener('click', () => {
+            const name = playerNameInput.value.trim();
+            if (name) {
+                playerName = name;
+                localStorage.setItem('playerName', playerName);
+                document.getElementById('name-input').style.display = 'none'; // Elrejtjük a név beviteli mezőt
+            }
+        });
+
+        // Kattintás esemény
+        bobcatImage.addEventListener('click', () => {
+            if (!playerName) {
+                alert('Először add meg a neved!');
+                return;
+            }
+
+            counter++;
+            counterDisplay.textContent = counter + ' kattintás';
+            localStorage.setItem('clickCount', counter);
+
+            // Hozzáadjuk/frissítjük a játékost a ranglistán
+            addPlayerToLeaderboard(playerName, counter);
+
+            // Skin nyerése
+            if (counter === 500) { // 500 kattintás után bobcat2 skin
+                if (!inventory.includes('bobcat2')) {
+                    inventory.push('bobcat2');
+                    localStorage.setItem('inventory', JSON.stringify(inventory));
+                    alert('Nyertél egy bobcat2 skint!');
+                }
+            }
+
+            if (counter >= 500 && counter < 1000 && Math.random() < 0.1) { // 10% esély bobcat3 skin nyerésére
+                if (!inventory.includes('bobcat3')) {
+                    inventory.push('bobcat3');
+                    localStorage.setItem('inventory', JSON.stringify(inventory));
+                    alert('Nyertél egy bobcat3 skint!');
+                }
+            }
+
+            // Első helyezett special skin
+            if (leaderboard[0].name === playerName && !specialSkinAssigned) {
+                inventory.push('special');
+                localStorage.setItem('inventory', JSON.stringify(inventory));
+                specialSkinAssigned = true;
+                alert('Megkaptad a special skint!');
+            }
+        });
+
+        // Kattintások visszaállítása
+        resetBtn.addEventListener('click', () => {
+            counter = 0;
+            localStorage.setItem('clickCount', counter);
+            counterDisplay.textContent = counter + ' kattintás';
+        });
+
+        // Összes adat törlése
+        resetAllBtn.addEventListener('click', () => {
+            if (confirm('Biztosan törölni szeretnéd az összes adatot?')) {
+                localStorage.clear();
+                leaderboard = [];
+                playerName = '';
+                counter = 0;
+                inventory = [];
+                specialSkinAssigned = false;
+
+                // Frissítjük a felhasználói felületet
+                counterDisplay.textContent = '0 kattintás';
+                updateLeaderboard();
+                document.getElementById('name-input').style.display = 'block'; // A névmező újra megjelenik
+                playerNameInput.value = ''; // Töröljük a névmezőt
+            }
+        });
+
+        // Skin gomb kattintás: megjelenítjük a skin panelt
+        skinsBtn.addEventListener('click', () => {
+            skinsPanel.style.display = 'block';
+        });
+
+        // Skin panel bezárása
+        closeSkinsBtn.addEventListener('click', () => {
+            skinsPanel.style.display = 'none';
+        });
+
+        // Skin kiválasztása
+        document.querySelectorAll('.skin').forEach(skin => {
+            skin.addEventListener('click', (event) => {
+                const selectedSkin = event.target.dataset.skin;
+                if (inventory.includes(selectedSkin)) {
+                    alert(`Kiválasztottad a ${selectedSkin} skint!`);
+                    bobcatImage.src = `${selectedSkin}.png`; // Átváltunk a kiválasztott skinnel
+                } else {
+                    alert('Nincs meg ez a skin!');
+                }
+            });
+        });
+
+        // Az oldal betöltésekor frissítjük a ranglistát
+        updateLeaderboard();
+    </script>
+</body>
+</html>
